@@ -8,7 +8,7 @@ use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 use tracing::info;
 
-use crate::commands::meta::*;
+use crate::commands::d100::*;
 use crate::slash;
 
 pub struct ShardManagerContainer;
@@ -25,7 +25,7 @@ impl EventHandler for Handler {
         info!("Connected as {}", ready.user.name);
 
         Command::create_global_application_command(&ctx.http, |command| {
-            slash::png::register(command)
+            slash::roll::register(command)
         })
         .await
         .unwrap();
@@ -38,7 +38,7 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             let content = match command.data.name.as_str() {
-                "ping" => slash::png::run(&command.data.options),
+                "roll" => slash::roll::run(&command.data.options),
                 _ => "not implemented :(".to_string(),
             };
 
@@ -57,5 +57,5 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(ping)]
+#[commands(d100)]
 struct General;

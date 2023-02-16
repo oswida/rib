@@ -5,6 +5,7 @@ mod slash;
 use std::collections::HashSet;
 use std::env;
 
+use bot::db::{close_database, init_database};
 use bot::handler::{Handler, ShardManagerContainer, GENERAL_GROUP};
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
@@ -54,12 +55,14 @@ async fn main() {
     }
 
     let shard_manager = client.shard_manager.clone();
+    let database = init_database();
 
     tokio::spawn(async move {
         tokio::signal::ctrl_c()
             .await
             .expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
+        close_database(database);
     });
 
     if let Err(why) = client.start().await {
