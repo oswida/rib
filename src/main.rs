@@ -1,5 +1,7 @@
 mod bot;
 mod commands;
+mod common;
+mod rpg;
 mod slash;
 
 use std::collections::HashSet;
@@ -14,24 +16,17 @@ use serenity::Client;
 use tracing::error;
 
 use crate::commands::help::HELP;
-
-#[derive(RustEmbed)]
-#[folder = "data/"]
-struct Asset;
+use crate::common::dir::init_app_dirs;
 
 #[tokio::main]
 async fn main() {
-    let index_html = Asset::get("ala.txt").unwrap();
-    println!("{:?}", std::str::from_utf8(index_html.data.as_ref()));
-
-    for file in Asset::iter() {
-        println!("{}", file.as_ref());
-    }
     // This will load the environment variables located at `./.env`, relative to
     // the CWD. See `./.env.example` for an example on how to structure this.
     dotenv::dotenv().expect("Failed to load .env file");
 
     tracing_subscriber::fmt::init();
+
+    init_app_dirs();
 
     let token = env::var("DC_TOKEN").expect("Expected a token in the environment");
     let prefix = env::var("DC_PREFIX").expect("Expected a bot prefix in the environment");
