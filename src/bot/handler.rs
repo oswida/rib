@@ -8,7 +8,9 @@ use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 use tracing::info;
 
+use crate::commands::d10::*;
 use crate::commands::d100::*;
+use crate::commands::whcs::*;
 use crate::slash;
 
 pub struct ShardManagerContainer;
@@ -57,5 +59,5 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(d100)]
+#[commands(d100, d10, whcs)]
 struct General;

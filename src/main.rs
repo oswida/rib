@@ -5,16 +5,28 @@ mod slash;
 use std::collections::HashSet;
 use std::env;
 
-use bot::db::{close_database, init_database};
 use bot::handler::{Handler, ShardManagerContainer, GENERAL_GROUP};
+use rust_embed::RustEmbed;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
 use serenity::prelude::GatewayIntents;
 use serenity::Client;
 use tracing::error;
 
+use crate::commands::help::HELP;
+
+#[derive(RustEmbed)]
+#[folder = "data/"]
+struct Asset;
+
 #[tokio::main]
 async fn main() {
+    let index_html = Asset::get("ala.txt").unwrap();
+    println!("{:?}", std::str::from_utf8(index_html.data.as_ref()));
+
+    for file in Asset::iter() {
+        println!("{}", file.as_ref());
+    }
     // This will load the environment variables located at `./.env`, relative to
     // the CWD. See `./.env.example` for an example on how to structure this.
     dotenv::dotenv().expect("Failed to load .env file");
@@ -38,7 +50,8 @@ async fn main() {
     // Create the framework
     let framework = StandardFramework::new()
         .configure(|c| c.owners(owners).prefix(prefix))
-        .group(&GENERAL_GROUP);
+        .group(&GENERAL_GROUP)
+        .help(&HELP);
 
     let intents = GatewayIntents::GUILD_MESSAGES
         | GatewayIntents::DIRECT_MESSAGES
@@ -55,14 +68,14 @@ async fn main() {
     }
 
     let shard_manager = client.shard_manager.clone();
-    let database = init_database();
+    // let database = init_database();
 
     tokio::spawn(async move {
         tokio::signal::ctrl_c()
             .await
             .expect("Could not register ctrl+c handler");
         shard_manager.lock().await.shutdown_all().await;
-        close_database(database);
+        // close_database(database);
     });
 
     if let Err(why) = client.start().await {
