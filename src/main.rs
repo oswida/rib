@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use std::env;
 
 use bot::handler::{Handler, ShardManagerContainer, GENERAL_GROUP};
+use rpg::wfrp::wfrp_init_dicts_pl;
 use rust_embed::RustEmbed;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
@@ -27,6 +28,7 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     init_app_dirs();
+    wfrp_init_dicts_pl();
 
     let token = env::var("DC_TOKEN").expect("Expected a token in the environment");
     let prefix = env::var("DC_PREFIX").expect("Expected a bot prefix in the environment");

@@ -1,0 +1,24 @@
+**{{name}}** ({{race}})
+{{class}}/{{profession}}: {{profession_level}}
+
+> __WW__: **{{stats.WW.current}}** ({{stats.WW.base}}+{{stats.WW.ext}}) ⬩ __Zw__: **{{stats.Zw.current}}** ({{stats.Zw.base}}+{{stats.Zw.ext}})
+> __US__: **{{stats.US.current}}** ({{stats.US.base}}+{{stats.US.ext}}) ⬩ __Zr__: **{{stats.Zr.current}}** ({{stats.Zr.base}}+{{stats.Zr.ext}})
+> __S__: **{{stats.S.current}}** ({{stats.S.base}}+{{stats.S.ext}}) ⬩ __Int__: **{{stats.Int.current}}** ({{stats.Int.base}}+{{stats.Int.ext}})
+> __Wt__: **{{stats.Wt.current}}** ({{stats.Wt.base}}+{{stats.Wt.ext}}) ⬩ __SW__: **{{stats.SW.current}}** ({{stats.SW.base}}+{{stats.SW.ext}})
+> __I__: **{{stats.I.current}}** ({{stats.I.base}}+{{stats.I.ext}}) ⬩ __Ogd__: **{{stats.Ogd.current}}** ({{stats.Ogd.base}}+{{stats.Ogd.ext}})
+
+> Żywotność: **{{wounds}}**
+
+Skills:
+{{#each skills as |value key|}}
+    {{#if value.level}}
+        {{value.name}}: **{{value.level}}** ({{value.stat}})
+    {{/if}}
+{{/each}}
+
+Talents:
+{{#each talents as |value|}}
+    {{#if value.level}}
+        {{value.name}}: {{value.level}}
+    {{/if}}
+{{/each}}
