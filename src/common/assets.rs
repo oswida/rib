@@ -6,18 +6,21 @@ use super::dir::write_to_binfile;
 #[folder = "data/"]
 struct Asset;
 
+/// Copy asset
 pub fn copy_asset(path: &str, destpath: &str) {
     let file = Asset::get(path).unwrap();
     let bytes = file.data.as_ref();
     write_to_binfile(destpath, bytes);
 }
 
+/// Retrieve bytes from asset
 pub fn get_asset_bytes(path: &str) -> Vec<u8> {
     let file = Asset::get(path).unwrap();
     let bytes = file.data.as_ref().to_vec();
     bytes
 }
 
+/// Retrieve asset as string
 pub fn get_asset_string(path: &str) -> String {
     let res = String::from_utf8(get_asset_bytes(path));
     match res {

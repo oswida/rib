@@ -6,12 +6,14 @@ use std::{
     path::Path,
 };
 
+/// Get full path to the app data dir.
 pub fn get_app_path(path: &str) -> String {
     let dir = env::current_dir().unwrap();
     let result = dir.canonicalize().unwrap();
     result.join(path).to_str().unwrap().to_string()
 }
 
+/// Create directory in the app data folder
 pub fn create_app_dir(path: &str) -> Result<(), Error> {
     let p = &get_app_path(path);
     let b: bool = Path::new(p).is_dir();
@@ -21,11 +23,13 @@ pub fn create_app_dir(path: &str) -> Result<(), Error> {
     Ok(())
 }
 
+/// Check if file exists in the data directory
 pub fn app_file_exists(path: &str) -> bool {
     let p = &get_app_path(path);
     Path::new(p).is_file()
 }
 
+/// Write string to file in data directory
 pub fn write_to_file(path: &str, content: &str) -> Result<(), Error> {
     let p = &get_app_path(path);
     let b: bool = Path::new(p).is_file();
@@ -35,16 +39,28 @@ pub fn write_to_file(path: &str, content: &str) -> Result<(), Error> {
     } else {
         file = OpenOptions::new()
             .write(true)
-            .append(false)
+            .truncate(true)
             .open(p)
             .expect("Cannot open file");
     }
     file.write_all(content.as_bytes())
         .expect("Cannot write to file");
-    file.sync_all().expect("Cannot sync file");
+
     Ok(())
 }
 
+/// Delete file from app data dir.
+pub fn delete_file(path: &str) -> Result<(), Error> {
+    let p = &get_app_path(path);
+    let b: bool = Path::new(p).is_file();
+    if !b {
+        return Ok(());
+    }
+    fs::remove_file(p).expect("Cannot delete file");
+    Ok(())
+}
+
+/// Write binary data to app dir.
 pub fn write_to_binfile(path: &str, content: &[u8]) {
     let p = &get_app_path(path);
     let b: bool = Path::new(p).is_file();
@@ -57,6 +73,7 @@ pub fn write_to_binfile(path: &str, content: &[u8]) {
     file.write_all(content).unwrap();
 }
 
+/// Read file from data directory
 pub fn read_from_file(path: &str) -> Result<String, Error> {
     let p = &get_app_path(path);
     let b: bool = Path::new(p).is_file();
@@ -74,6 +91,7 @@ pub fn read_from_file(path: &str) -> Result<String, Error> {
     }
 }
 
+/// Initialize application directories
 pub fn init_app_dirs() {
     let app_dirs = ["cs"];
     for d in app_dirs {

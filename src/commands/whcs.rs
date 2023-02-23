@@ -1,20 +1,28 @@
-use std::str::FromStr;
-
 use crate::common::assets::get_asset_string;
-use crate::common::dir::{app_file_exists, create_app_dir, read_from_file, write_to_file};
-use crate::common::text::capitalize;
+use crate::common::dir::{
+    app_file_exists, create_app_dir, delete_file, read_from_file, write_to_file,
+};
+use crate::common::discord::text_button;
 use crate::rpg::wfrp::{wfrp_find_stat_pl, WfrpChar, WfrpCoreStat};
-
 use serde_json::json;
 use serenity::framework::standard::macros::command;
 use serenity::framework::standard::{Args, CommandResult};
-
+use serenity::http::CacheHttp;
+use serenity::model::application::interaction::InteractionResponseType;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
+use std::str::FromStr;
+use std::time::Duration;
+
+pub fn charsheet_exists(name: String, id: String) -> (bool, String) {
+    create_app_dir(&format!("cs/{}", id)).expect("Cannot create user dir");
+    let cs_name = &format!("cs/{}/{}.json", id, name);
+    (app_file_exists(cs_name), cs_name.to_string())
+}
 
 #[command("whcs")]
 #[description("Warhammer Fantasy Roleplay 4ed charsheets mgmt")]
-#[sub_commands(whcs_create, whcs_show, whcs_set)]
+#[sub_commands(whcs_create, whcs_show, whcs_set, whcs_del)]
 async fn whcs(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, "WHCS").await?;
     Ok(())
@@ -28,9 +36,7 @@ async fn whcs(ctx: &Context, msg: &Message) -> CommandResult {
 async fn whcs_create(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let name = args.rest();
     let id = msg.author.id.to_string();
-    create_app_dir(&format!("cs/{}", id));
-    let cs_name = &format!("cs/{}/{}.json", id, name);
-    let cs_exists = app_file_exists(cs_name);
+    let (cs_exists, cs_name) = charsheet_exists(name.to_string(), id);
     if cs_exists {
         msg.channel_id
             .say(&ctx.http, &format!("Charsheet for {} already exists", name))
@@ -44,8 +50,7 @@ async fn whcs_create(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 
     let cresp = c.print(&tpl);
 
-    let response = msg
-        .channel_id
+    msg.channel_id
         .send_message(&ctx.http, |m| {
             m.content(cresp).flags(MessageFlags::EPHEMERAL)
             // .embed(|e| {
@@ -68,7 +73,8 @@ async fn whcs_create(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
             // })
             // .add_file("./ferris_eyes.png")
         })
-        .await;
+        .await
+        .unwrap();
 
     Ok(())
 }
@@ -81,9 +87,7 @@ async fn whcs_create(ctx: &Context, msg: &Message, args: Args) -> CommandResult 
 async fn whcs_show(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let name = args.rest();
     let id = msg.author.id.to_string();
-    create_app_dir(&format!("./cs/{}", id));
-    let cs_name = &format!("./cs/{}/{}.json", id, name);
-    let cs_exists = app_file_exists(cs_name);
+    let (cs_exists, cs_name) = charsheet_exists(name.to_string(), id);
     if !cs_exists {
         msg.channel_id
             .say(&ctx.http, &format!("Charsheet for {} does not exist", name))
@@ -120,9 +124,7 @@ async fn whcs_set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
     let name = args.parse::<String>().expect("Charsheet name is required");
     args.advance();
     let id = msg.author.id.to_string();
-    create_app_dir(&format!("./cs/{}", id)).expect("Cannot create app dir");
-    let cs_name = &format!("./cs/{}/{}.json", id, name);
-    let cs_exists = app_file_exists(cs_name);
+    let (cs_exists, cs_name) = charsheet_exists(name.to_string(), id);
     if !cs_exists {
         msg.channel_id
             .say(&ctx.http, &format!("Charsheet for {} does not exist", name))
@@ -169,5 +171,71 @@ async fn whcs_set(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         })
         .await;
 
+    Ok(())
+}
+
+#[command("del")]
+#[aliases("d")]
+#[description("Delete charsheet")]
+#[num_args(1)]
+#[help_available]
+async fn whcs_del(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let name = args.rest();
+    let id = msg.author.id.to_string();
+    let (cs_exists, cs_name) = charsheet_exists(name.to_string(), id);
+    if !cs_exists {
+        msg.channel_id
+            .say(&ctx.http, &format!("Charsheet for {} does not exist", name))
+            .await?;
+        return Ok(());
+    }
+
+    let response = msg
+        .channel_id
+        .send_message(&ctx.http, |m| {
+            m.content(format!("Deleting charsheet for {}. Please confirm.", name))
+                .flags(MessageFlags::EPHEMERAL)
+                .components(|c| {
+                    c.create_action_row(|r| {
+                        r.add_button(text_button("Cancel"));
+                        r.add_button(text_button("Delete"))
+                    })
+                })
+        })
+        .await
+        .unwrap();
+
+    let interaction = match response
+        .await_component_interaction(&ctx)
+        .timeout(Duration::from_secs(30))
+        .await
+    {
+        Some(x) => x,
+        None => {
+            response.reply(&ctx, "Timed out").await.unwrap();
+            response.delete(&ctx.http()).await.unwrap();
+            return Ok(());
+        }
+    };
+
+    if let "Delete" = interaction.data.custom_id.as_str() {
+        delete_file(cs_name.as_str()).expect("Cannot delete charsheet");
+        interaction
+            .create_interaction_response(&ctx.http, |r| {
+                r.kind(InteractionResponseType::ChannelMessageWithSource)
+                    .interaction_response_data(|d| d.ephemeral(true).content("Charsheet deleted"))
+            })
+            .await
+            .unwrap();
+    } else {
+        interaction
+            .create_interaction_response(&ctx.http, |r| {
+                r.kind(InteractionResponseType::ChannelMessageWithSource)
+                    .interaction_response_data(|d| d.ephemeral(true).content("Operation cancelled"))
+            })
+            .await
+            .unwrap();
+    }
+    response.delete(&ctx.http()).await.unwrap();
     Ok(())
 }
